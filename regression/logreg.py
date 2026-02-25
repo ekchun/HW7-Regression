@@ -43,46 +43,49 @@ class BaseRegressor():
         # Repeat until convergence or maximum iterations reached
         while prev_update_size > self.tol and iteration < self.max_iter:
 
-            # Shuffling the training data for each epoch of training
-            shuffle_arr = np.concatenate([X_train, np.expand_dims(y_train, 1)], axis=1)
-            np.random.shuffle(shuffle_arr)
-            X_train = shuffle_arr[:, :-1]
-            y_train = shuffle_arr[:, -1].flatten()
+            # Repeat until convergence or maximum iterations reached
+            while prev_update_size > self.tol and iteration < self.max_iter:
 
-            # Create batches
-            num_batches = int(X_train.shape[0] / self.batch_size) + 1
-            X_batch = np.array_split(X_train, num_batches)
-            y_batch = np.array_split(y_train, num_batches)
+                # Shuffling the training data for each epoch of training
+                shuffle_arr = np.concatenate([X_train, np.expand_dims(y_train, 1)], axis=1)
+                np.random.shuffle(shuffle_arr)
+                X_train = shuffle_arr[:, :-1]
+                y_train = shuffle_arr[:, -1].flatten()
 
-            # Create list to save the parameter update sizes for each batch
-            update_sizes = []
+                # Create batches
+                num_batches = int(X_train.shape[0] / self.batch_size) + 1
+                X_batches = np.array_split(X_train, num_batches)
+                y_batches = np.array_split(y_train, num_batches)
 
-            # Iterate through batches (one of these loops is one epoch of training)
-            for X_train, y_train in zip(X_batch, y_batch):
+                # Create list to save the parameter update sizes for each batch
+                update_sizes = []
 
-                # Make prediction and calculate loss
-                y_pred = self.make_prediction(X_train)
-                train_loss = self.loss_function(y_train, y_pred)
-                self.loss_hist_train.append(train_loss)
+                # Iterate through batches (one of these loops is one epoch of training)
+                for X_batch, y_batch in zip(X_batches, y_batches):
 
-                # Update weights
-                prev_W = self.W
-                grad = self.calculate_gradient(y_train, X_train)
-                new_W = prev_W - self.lr * grad 
-                self.W = new_W
+                    # Make prediction and calculate loss
+                    y_pred = self.make_prediction(X_batch)
+                    train_loss = self.loss_function(y_batch, y_pred)
+                    self.loss_hist_train.append(train_loss)
 
-                # Save parameter update size
-                update_sizes.append(np.abs(new_W - prev_W))
+                    # Update weights
+                    prev_W = self.W
+                    grad = self.calculate_gradient(y_batch, X_batch)
+                    new_W = prev_W - self.lr * grad 
+                    self.W = new_W
 
-                # Compute validation loss
-                val_loss = self.loss_function(y_val, self.make_prediction(X_val))
-                self.loss_hist_val.append(val_loss)
+                    # Save parameter update size
+                    update_sizes.append(np.abs(new_W - prev_W))
 
-            # Define step size as the average parameter update over the past epoch
-            prev_update_size = np.mean(np.array(update_sizes))
+                    # Compute validation loss
+                    val_loss = self.loss_function(y_val, self.make_prediction(X_val))
+                    self.loss_hist_val.append(val_loss)
 
-            # Update iteration
-            iteration += 1
+                # Define step size as the average parameter update over the past epoch
+                prev_update_size = np.mean(np.array(update_sizes))
+
+                # Update iteration
+                iteration += 1
     
     def plot_loss_history(self):
 
@@ -129,8 +132,13 @@ class LogisticRegressor(BaseRegressor):
         Returns: 
             The predicted labels (y_pred) for given X.
         """
-        pass
-    
+        y_pred = np.zeros(X.shape[0])
+
+        for i in range(X.shape[0]):
+            y_pred[i] = 1 / (1 + np.exp(-np.dot(self.W, X[i])))
+
+        return (y_pred >= 0.5).astype(int)
+
     def loss_function(self, y_true, y_pred) -> float:
         """
         TODO: Implement binary cross entropy loss, which assumes that the true labels are either
@@ -143,7 +151,12 @@ class LogisticRegressor(BaseRegressor):
         Returns: 
             The mean loss (a single number).
         """
-        pass
+        mean_loss = 0
+
+        for i in range(len(y_true)):
+                mean_loss += -(y_true[i] * np.log(y_pred[i]) + (1 - y_true[i]) * np.log(1 - y_pred[i]))
+
+        return mean_loss / len(y_true)
         
     def calculate_gradient(self, y_true, X) -> np.ndarray:
         """
@@ -157,4 +170,10 @@ class LogisticRegressor(BaseRegressor):
         Returns: 
             Vector of gradients.
         """
-        pass
+        gradient = np.zeros(X.shape[1])
+
+        for i in range(X.shape[0]):
+            y_pred = 1 / (1 + np.exp(-np.dot(self.W, X[i])))
+            gradient += (y_pred - y_true[i]) * X[i]
+
+        return gradient / X.shape[0]
