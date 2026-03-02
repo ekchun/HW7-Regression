@@ -11,7 +11,6 @@ This is not an exhaustive list.
 # Imports
 import pytest
 import numpy as np
-import pandas as pd
 
 from regression import LogisticRegressor
 from regression import loadDataset
