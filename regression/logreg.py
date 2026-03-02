@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Base class for generic regressor
 # (this is already complete!)
@@ -119,7 +118,14 @@ class LogisticRegressor(BaseRegressor):
             max_iter=max_iter,
             batch_size=batch_size
         )
+        self.epsilon = 1e-6  # for numerical stability
     
+    def _sigmoid(self, x):
+        """
+        make my life easier, define sigmoid fxn
+        """
+        return 1 / (1 + np.exp(-x))
+
     def make_prediction(self, X) -> np.array:
         """
         TODO: Implement logistic function to get estimates (y_pred) for input X values. The logistic
@@ -132,12 +138,16 @@ class LogisticRegressor(BaseRegressor):
         Returns: 
             The predicted labels (y_pred) for given X.
         """
-        y_pred = np.zeros(X.shape[0])
 
-        for i in range(X.shape[0]):
-            y_pred[i] = 1 / (1 + np.exp(-np.dot(self.W, X[i])))
+        # check inputs
+        if not np.issubdtype(X.dtype, np.number):
+            raise ValueError("`X` must be numeric")
+        if np.isnan(X).any():
+            raise ValueError("`X` contains NaN values")
+        
+        y_pred = self._sigmoid(np.dot(X, self.W))
 
-        return (y_pred >= 0.5).astype(int)
+        return (y_pred >= 0.5).astype(int) # threshold 0.5 for binary classification??
 
     def loss_function(self, y_true, y_pred) -> float:
         """
@@ -151,12 +161,24 @@ class LogisticRegressor(BaseRegressor):
         Returns: 
             The mean loss (a single number).
         """
+
+        # check inputs
+        if len(y_true) == 0: # edge case no data, no loss
+            return 0
+        if not np.issubdtype(y_true.dtype, np.number):
+            raise ValueError("`y_true` must be numeric")
+        if not np.issubdtype(y_pred.dtype, np.number):
+            raise ValueError("`y_pred` must be numeric")
+        if not len(y_true) == len(y_pred):
+            raise ValueError("lengths of `y_true` and `y_pred` don't match!")
+        
         mean_loss = 0
+        n = len(y_true)
 
-        for i in range(len(y_true)):
-                mean_loss += -(y_true[i] * np.log(y_pred[i]) + (1 - y_true[i]) * np.log(1 - y_pred[i]))
+        for i in range(n):
+            mean_loss += -(y_true[i] * np.log(y_pred[i]) + (1 - y_true[i]) * np.log(1 - y_pred[i]))
 
-        return mean_loss / len(y_true)
+        return mean_loss / n
         
     def calculate_gradient(self, y_true, X) -> np.ndarray:
         """
@@ -170,10 +192,9 @@ class LogisticRegressor(BaseRegressor):
         Returns: 
             Vector of gradients.
         """
-        gradient = np.zeros(X.shape[1])
+        y_pred = self.make_prediction(X)
+        n = len(y_true)
 
-        for i in range(X.shape[0]):
-            y_pred = 1 / (1 + np.exp(-np.dot(self.W, X[i])))
-            gradient += (y_pred - y_true[i]) * X[i]
+        gradient = (1/n) * np.dot(X.T, y_pred - y_true)
 
-        return gradient / X.shape[0]
+        return gradient
