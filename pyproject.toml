@@ -20,7 +20,8 @@ dynamic = ["version", "description"]
 dependencies = [
     "pytest",
     "numpy",
-    "matplotlib"
+    "matplotlib",
+    "pandas"
 ]
 
 [project.urls]
