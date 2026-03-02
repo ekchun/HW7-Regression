@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Base class for generic regressor
 # (this is already complete!)
@@ -120,7 +121,7 @@ class LogisticRegressor(BaseRegressor):
         )
         self.epsilon = 1e-6  # for numerical stability
     
-    def _sigmoid(self, x):
+    def sigmoid(self, x):
         """
         make my life easier, define sigmoid fxn
         """
@@ -145,9 +146,9 @@ class LogisticRegressor(BaseRegressor):
         if np.isnan(X).any():
             raise ValueError("`X` contains NaN values")
         
-        y_pred = self._sigmoid(np.dot(X, self.W))
+        y_pred = self.sigmoid(np.dot(X, self.W))
 
-        return (y_pred >= 0.5).astype(int) # threshold 0.5 for binary classification??
+        return y_pred
 
     def loss_function(self, y_true, y_pred) -> float:
         """
@@ -176,7 +177,7 @@ class LogisticRegressor(BaseRegressor):
         n = len(y_true)
 
         for i in range(n):
-            mean_loss += -(y_true[i] * np.log(y_pred[i]) + (1 - y_true[i]) * np.log(1 - y_pred[i]))
+            mean_loss += -(y_true[i] * np.log(y_pred[i] + self.epsilon) + (1 - y_true[i]) * np.log(1 - y_pred[i] + self.epsilon))
 
         return mean_loss / n
         
